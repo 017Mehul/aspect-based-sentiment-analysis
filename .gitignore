@@ -1,0 +1,10 @@
+# Large local data files
+Reviews.csv
+database.sqlite
+
+# Local metadata / scratch files
+hashes.txt
+
+# Python cache files
+__pycache__/
+*.py[cod]
