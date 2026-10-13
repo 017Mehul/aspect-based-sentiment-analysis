@@ -129,8 +129,9 @@ def extract_aspects(text: str, nlp=None, max_chars: int = 2000) -> list[str]:
 def predict_aspect_sentiment(text: str, aspects: Iterable[str] | None = None) -> list[dict]:
     """Transparent proximity-lexicon baseline; not a trained ABSA model.
 
-    Scores sentiment words within a small context window around each aspect.
-    Returns 'unknown' when no sentiment evidence is found instead of guessing.
+    Each opinion word is assigned to the nearest detected aspect within four
+    tokens, reducing sentiment leakage between nearby aspects. Returns
+    'unknown' when no sentiment evidence is found instead of guessing.
     """
     if not isinstance(text, str) or not text.strip():
         return []
@@ -138,7 +139,7 @@ def predict_aspect_sentiment(text: str, aspects: Iterable[str] | None = None) ->
     if aspects is None:
         nlp = load_spacy_model()
         aspects = extract_aspects(text, nlp=nlp)
-    results = []
+    aspect_items = []
     for aspect in aspects:
         phrase_tokens = re.findall(r"[a-z]+(?:'[a-z]+)?", aspect.lower())
         positions = []
@@ -146,23 +147,32 @@ def predict_aspect_sentiment(text: str, aspects: Iterable[str] | None = None) ->
             if phrase_tokens and tokens[i:i + len(phrase_tokens)] == phrase_tokens:
                 positions.append(i)
         if not positions:
-            # Lemmatized extracted terms may differ from the surface form.
             positions = [i for i, token in enumerate(tokens) if token in phrase_tokens]
-        score = 0
-        evidence = []
-        for pos in positions:
-            lo, hi = max(0, pos - 4), min(len(tokens), pos + len(phrase_tokens) + 5)
-            context = tokens[lo:hi]
-            for j, word in enumerate(context):
-                if word in POSITIVE_WORDS or word in NEGATIVE_WORDS:
-                    polarity = 1 if word in POSITIVE_WORDS else -1
-                    if any(w in NEGATIONS for w in context[max(0, j - 3):j]):
-                        polarity *= -1
-                    score += polarity
-                    evidence.append(word)
+        aspect_items.append((aspect, phrase_tokens, positions))
+    scores = {aspect: 0 for aspect, _, _ in aspect_items}
+    evidence = {aspect: [] for aspect, _, _ in aspect_items}
+    for i, word in enumerate(tokens):
+        if word not in POSITIVE_WORDS and word not in NEGATIVE_WORDS:
+            continue
+        polarity = 1 if word in POSITIVE_WORDS else -1
+        if any(w in NEGATIONS for w in tokens[max(0, i - 3):i]):
+            polarity *= -1
+        nearest = None
+        nearest_distance = 5
+        for aspect, phrase_tokens, positions in aspect_items:
+            for pos in positions:
+                distance = max(0, pos - i - 1, i - pos - len(phrase_tokens) + 1)
+                if distance < nearest_distance:
+                    nearest, nearest_distance = aspect, distance
+        if nearest is not None and nearest_distance <= 4:
+            scores[nearest] += polarity
+            evidence[nearest].append(word)
+    results = []
+    for aspect, _, _ in aspect_items:
+        score = scores[aspect]
         label = "positive" if score > 0 else "negative" if score < 0 else "unknown"
         results.append({"aspect": aspect, "sentiment": label, "score": score,
-                        "evidence": evidence, "method": "lexicon-proximity baseline"})
+                        "evidence": evidence[aspect], "method": "lexicon-proximity baseline"})
     return results
 
 
