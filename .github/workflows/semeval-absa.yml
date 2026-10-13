@@ -39,7 +39,7 @@ jobs:
             "https://raw.githubusercontent.com/davidsbatista/Aspect-Based-Sentiment-Analysis/master/datasets/ABSA-SemEval2014/Restaurants_Train_v2.xml" \
             --output data/Restaurants_Train_v2.xml
           curl --fail --location --retry 3 --retry-delay 2 \
-            "https://raw.githubusercontent.com/davidsbatista/Aspect-Based-Sentiment-Analysis/master/datasets/ABSA-SemEval2014/Restaurants_Test_Data_phaseB.xml" \
+            "https://raw.githubusercontent.com/HSLCY/ABSA-BERT-pair/master/data/semeval2014/Restaurants_Test_Gold.xml" \
             --output data/Restaurants_Test_Gold.xml
           test "$(wc -c < data/Restaurants_Train_v2.xml)" -gt 100000
           test "$(wc -c < data/Restaurants_Test_Gold.xml)" -gt 100000
