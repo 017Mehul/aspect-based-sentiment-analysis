@@ -91,3 +91,10 @@ The workflow runs unit tests in GitHub Actions. A successful CI run verifies the
 4. Devlin, J., Chang, M.-W., Lee, K., & Toutanova, K. (2019). BERT: Pre-training of deep bidirectional transformers for language understanding. https://arxiv.org/abs/1810.04805
 5. Scikit-learn developers. *scikit-learn documentation*. https://scikit-learn.org/stable/
 6. spaCy developers. *spaCy documentation*. https://spacy.io/
+
+## 12. Supervised SemEval ABSA implementation
+
+A separate implementation, `absa_supervised.py`, supports a supervised two-stage baseline on SemEval-2014 Task 4 Restaurants XML. It trains a token-level BIO sequence classifier for aspect-term extraction and a TF-IDF/Linear SVM polarity classifier using marked aspect context. It writes exact-span extraction precision/recall/F1, polarity accuracy and macro-F1 conditioned on gold aspects, and an end-to-end joint score requiring exact span and polarity.
+
+No SemEval metrics are claimed in this report until the official training and gold test XML files are obtained, their release is recorded, and the script is run. The corpus is not included in this repository; use it according to the official distribution terms. The Amazon review-level experiment and SemEval aspect-level experiment are separate and must be reported separately.
+
