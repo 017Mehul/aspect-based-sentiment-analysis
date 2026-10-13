@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { Activity, ArrowDown, ArrowRight, Check, CircleHelp, FlaskConical, Github, LoaderCircle, RotateCcw, ScanSearch, ShieldCheck, Sparkles, WandSparkles } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const HeroScene = dynamic(() => import("./components/hero-scene"), {
   ssr: false,
@@ -41,6 +41,22 @@ export default function Home() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [backendStatus, setBackendStatus] = useState<"checking" | "ready" | "warming" | "unavailable">("checking");
+
+  useEffect(() => {
+    let active = true;
+    async function warmBackend() {
+      try {
+        const response = await fetch("/api/health", { cache: "no-store" });
+        const data = await response.json().catch(() => ({}));
+        if (active) setBackendStatus(response.ok && data.status === "ready" ? "ready" : data.status === "warming" ? "warming" : "unavailable");
+      } catch {
+        if (active) setBackendStatus("unavailable");
+      }
+    }
+    void warmBackend();
+    return () => { active = false; };
+  }, []);
 
   async function analyze() {
     setError("");
@@ -125,10 +141,11 @@ export default function Home() {
               <label className="field-label aspect-label" htmlFor="aspects">ASPECTS TO CHECK <span>OPTIONAL</span></label>
               <input id="aspects" value={aspectInput} onChange={(event) => setAspectInput(event.target.value)} placeholder="coffee, packaging, delivery" />
               <p className="field-hint"><CircleHelp size={14} /> Add comma-separated aspect terms, or leave blank to use spaCy extraction.</p>
-              <button className="analyze-button" type="button" onClick={analyze} disabled={loading || !review.trim()}>
+              <button className="analyze-button" type="button" onClick={analyze} disabled={loading || !review.trim() || backendStatus !== "ready"}>
                 {loading ? <><LoaderCircle className="spin" size={18} /> Analyzing with Python…</> : <><WandSparkles size={18} /> Analyze sentiment <ArrowRight size={17} /></>}
               </button>
               {error && <div className="error-box" role="alert"><CircleHelp size={17} /><span>{error}</span></div>}
+              {backendStatus !== "ready" && <div className="error-box" role="status"><CircleHelp size={17} /><span>{backendStatus === "checking" || backendStatus === "warming" ? "Waking the Python service on Render. The first connection can take a little while; this page checks it automatically." : "The Python service is not responding yet. Retry the connection after a short wait."}</span>{backendStatus === "unavailable" && <button className="text-button" type="button" onClick={() => window.location.reload()}>Retry</button>}</div>}
               <div className="privacy-note"><ShieldCheck size={15} /> Results are returned by your configured inference service; this interface does not invent predictions.</div>
             </div>
 
@@ -161,7 +178,7 @@ export default function Home() {
               )}
             </div>
           </div>
-          <div className="workspace-foot"><span><span className="tiny-live-dot" /> INFERENCE STATUS: {loading ? "RUNNING" : result ? "COMPLETE" : "IDLE"}</span><span>NO FABRICATED METRICS · NO PLACEHOLDER PREDICTIONS</span></div>
+          <div className="workspace-foot"><span><span className="tiny-live-dot" /> INFERENCE STATUS: {loading ? "RUNNING" : result ? "COMPLETE" : backendStatus === "ready" ? "READY" : backendStatus === "checking" || backendStatus === "warming" ? "WAKING SERVICE" : "UNAVAILABLE"}</span><span>NO FABRICATED METRICS · NO PLACEHOLDER PREDICTIONS</span></div>
         </div>
       </section>
 
