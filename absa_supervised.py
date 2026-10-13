@@ -19,7 +19,6 @@ import joblib
 import numpy as np
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     accuracy_score,
     classification_report,
@@ -192,8 +191,8 @@ def evaluate(train_xml: str | Path, test_xml: str | Path,
     x_train, y_train, _ = examples_to_token_rows(train)
     vectorizer = DictVectorizer(sparse=True)
     X_train = _int32_csr(vectorizer.fit_transform(x_train))
-    extractor = LogisticRegression(max_iter=1500, class_weight="balanced",
-                                   random_state=42, solver="lbfgs")
+    extractor = LinearSVC(max_iter=5000, class_weight="balanced",
+                          random_state=42)
     extractor.fit(X_train, y_train)
 
     gold_spans: set[tuple[int, int, int]] = set()
