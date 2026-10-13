@@ -115,6 +115,10 @@ The metrics are saved to `outputs/semeval14/semeval_absa_metrics.json`, polarity
 
 The SemEval run is independent of Amazon review-level sentiment. Amazon results cannot validate aspect-term extraction or aspect polarity because Amazon's `Score` labels are for whole reviews only.
 
+## Reproduced results
+
+Fresh metrics from the actual Amazon CSV and the supervised SemEval-2014 ABSA experiment are documented in [EXPERIMENT_RESULTS.md](EXPERIMENT_RESULTS.md). The GitHub Actions artifacts linked there contain the complete machine-generated reports, confusion matrices, plots, model files, and provenance metadata. The Amazon run uses a reproducible 5,000-review sample; it is not full-corpus training.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
