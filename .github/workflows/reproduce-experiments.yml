@@ -1,0 +1,106 @@
+name: Reproduce real-dataset experiments
+
+on:
+  push:
+    branches:
+      - audit/fix-absa-pipeline
+    paths:
+      - "absa_project.py"
+      - "absa_supervised.py"
+      - ".github/workflows/reproduce-experiments.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download Amazon Fine Food Reviews CSV
+        run: |
+          mkdir -p data outputs/amazon
+          curl --fail --location --retry 3 --retry-delay 2 \
+            "https://media.githubusercontent.com/media/bydevmar/Amazon_Fine_Food_Sentiment_Analysis/bydev/Reviews.csv" \
+            --output data/Reviews.csv
+          test "$(wc -c < data/Reviews.csv)" -gt 100000000
+          head -n 1 data/Reviews.csv
+
+      - name: Run six review-level baselines on reproducible 5,000-review sample
+        run: |
+          python absa_project.py --data data/Reviews.csv --sample-size 5000 --output-dir outputs/amazon
+
+      - name: Download SemEval-2014 Restaurants annotated XML
+        run: |
+          curl --fail --location --retry 3 --retry-delay 2 \
+            "https://raw.githubusercontent.com/davidsbatista/Aspect-Based-Sentiment-Analysis/master/datasets/ABSA-SemEval2014/Restaurants_Train_v2.xml" \
+            --output data/Restaurants_Train_v2.xml
+          curl --fail --location --retry 3 --retry-delay 2 \
+            "https://raw.githubusercontent.com/davidsbatista/Aspect-Based-Sentiment-Analysis/master/datasets/ABSA-SemEval2014/Restaurants_Test_Data_phaseB.xml" \
+            --output data/Restaurants_Test_Gold.xml
+          test "$(wc -c < data/Restaurants_Train_v2.xml)" -gt 100000
+          test "$(wc -c < data/Restaurants_Test_Gold.xml)" -gt 100000
+
+      - name: Run supervised aspect extraction and polarity evaluation
+        run: |
+          python absa_supervised.py \
+            --train data/Restaurants_Train_v2.xml \
+            --test data/Restaurants_Test_Gold.xml \
+            --output-dir outputs/semeval14
+
+      - name: Record experiment provenance
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, platform, subprocess
+          from pathlib import Path
+          import numpy, pandas, sklearn
+          def sha256(path):
+              h = hashlib.sha256()
+              with open(path, "rb") as f:
+                  for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                      h.update(chunk)
+              return h.hexdigest()
+          files = [
+              "data/Reviews.csv",
+              "data/Restaurants_Train_v2.xml",
+              "data/Restaurants_Test_Gold.xml",
+          ]
+          metadata = {
+              "git_commit": os.environ.get("GITHUB_SHA"),
+              "python": platform.python_version(),
+              "numpy": numpy.__version__,
+              "pandas": pandas.__version__,
+              "scikit_learn": sklearn.__version__,
+              "amazon_sample_size_requested": 5000,
+              "random_seed": 42,
+              "dataset_files": {
+                  p: {"bytes": Path(p).stat().st_size, "sha256": sha256(p)}
+                  for p in files
+              },
+              "note": "Only metrics/models are uploaded; source datasets are not included in the artifact."
+          }
+          Path("outputs/run_metadata.json").write_text(json.dumps(metadata, indent=2))
+          PY
+
+      - name: Upload metrics and model artifacts (not raw datasets)
+        uses: actions/upload-artifact@v4
+        with:
+          name: reproduced-absa-experiments
+          path: outputs/
+          if-no-files-found: error
+          retention-days: 30
