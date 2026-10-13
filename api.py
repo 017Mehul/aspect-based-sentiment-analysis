@@ -1,8 +1,8 @@
 """HTTP inference adapter for the existing ABSA Python pipeline.
 
-Aspect polarity is the repository's transparent lexicon/proximity baseline.
-Review-level prediction is returned only when a trained joblib pipeline exists.
-No synthetic scores or placeholder predictions are generated.
+The experiment module imports plotting and data-analysis dependencies. Import
+those only when a request needs inference so the web process can bind its port
+quickly on a small Render instance.
 """
 from __future__ import annotations
 
@@ -11,16 +11,13 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-import joblib
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from absa_project import clean_text, extract_aspects, predict_aspect_sentiment
-
 app = FastAPI(
     title="ABSA Inference API",
-    description="Inference adapter for the repository's existing Python sentiment pipeline.",
-    version="1.0.0",
+    description="Inference adapter for the repository's Python sentiment pipeline.",
+    version="1.0.1",
 )
 
 
@@ -37,6 +34,7 @@ def _load_nlp():
 
 @lru_cache(maxsize=1)
 def _load_review_model():
+    import joblib
     configured = os.getenv("ABSA_REVIEW_MODEL_PATH", "outputs/best_review_sentiment_pipeline.joblib")
     path = Path(configured)
     if not path.is_file():
@@ -59,11 +57,13 @@ def health() -> dict[str, Any]:
 
 @app.post("/analyze")
 def analyze(payload: AnalyzeRequest) -> dict[str, Any]:
+    from absa_project import clean_text, extract_aspects, predict_aspect_sentiment
+
     text = payload.text.strip()
     if not text:
         raise HTTPException(status_code=422, detail="Review text cannot be blank.")
 
-    supplied_aspects = [a.strip() for a in (payload.aspects or []) if a.strip()]
+    supplied_aspects = [aspect.strip() for aspect in (payload.aspects or []) if aspect.strip()]
     try:
         aspects = supplied_aspects if supplied_aspects else extract_aspects(text, nlp=_load_nlp())
     except RuntimeError as exc:
@@ -81,7 +81,6 @@ def analyze(payload: AnalyzeRequest) -> dict[str, Any]:
             review_prediction = str(model.predict([clean_text(text)])[0])
             review_model_available = True
     except Exception as exc:
-        # Do not disguise a broken artifact as a valid prediction.
         raise HTTPException(status_code=500, detail=f"Review model inference failed: {type(exc).__name__}.") from exc
 
     return {
