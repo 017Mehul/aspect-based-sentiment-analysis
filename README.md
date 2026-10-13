@@ -1,128 +1,102 @@
-# Aspect-Based Sentiment Analysis on Amazon Fine Food Reviews
+# Aspect-Based Sentiment Analysis (ABSA) — Review Sentiment Baseline
 
-This repository presents a classical NLP and machine learning pipeline for sentiment analysis on the Amazon Fine Food Reviews dataset. The project combines text preprocessing with NLTK, noun-based aspect extraction with spaCy, feature engineering with Bag of Words and TF-IDF, and sentiment classification using Logistic Regression, Naive Bayes, and Linear SVM.
+A reproducible NLP project for Amazon Fine Food Reviews. It compares classical **review-level** sentiment classifiers and includes a separate, interpretable **lexicon/proximity aspect-sentiment demo**.
 
-While the project extracts aspect terms from reviews, the classification stage remains document-level binary sentiment classification. In other words, it identifies candidate aspects from the text, but it does not yet assign a separate sentiment label to each aspect.
+> **Important scope note:** Amazon Fine Food Reviews provides review ratings, not gold labels for individual aspects. The BoW/TF-IDF models therefore predict sentiment for an entire review. The aspect-level demo is a heuristic baseline, not a supervised or benchmark-validated ABSA model. Do not describe its outputs as proven aspect-level accuracy.
 
-## Project Highlights
+## Features
 
-- End-to-end NLP workflow from raw review text to evaluation plots
-- Text preprocessing with tokenization, stopword removal, and normalization
-- Automatic aspect extraction using spaCy noun and proper noun detection
-- Comparative evaluation of BoW and TF-IDF representations
-- Classification with Logistic Regression, Multinomial Naive Bayes, and Linear SVM
-- Leakage-free train/test evaluation with confusion matrices and summary visualizations
+- Validated dataset loading and reproducible sampling.
+- Text normalization that preserves negation (for example, “not good”).
+- Review-level binary labels: ratings 1–2 = negative, 4–5 = positive; neutral 3-star reviews are excluded.
+- Six baseline configurations: Logistic Regression, Multinomial Naive Bayes, and Linear SVM using BoW and TF-IDF.
+- Stratified holdout evaluation with accuracy, macro/weighted F1, and per-class precision, recall and F1.
+- Fresh CSV/JSON metrics, confusion-matrix CSVs, plots, and a serialized best review-level pipeline.
+- Candidate noun-phrase extraction with spaCy.
+- A transparent aspect sentiment heuristic that assigns nearby opinion words to the nearest aspect and returns “unknown” when no lexicon evidence is found.
+- Unit tests and GitHub Actions CI.
 
-## Dataset
+## Repository structure
 
-The project uses the Amazon Fine Food Reviews dataset from Kaggle:
+- `absa_project.py` — training, evaluation, aspect extraction and demo.
+- `tests/test_absa_project.py` — regression tests.
+- `requirements.txt` — Python dependencies.
+- `ABSA_Academic_Report.md` — report draft; update its numerical results after running the current pipeline.
+- `outputs/` — generated metrics, reports, confusion matrices, plots and model artifact (created locally; not committed).
+- `LICENSE` — MIT License.
 
-https://www.kaggle.com/datasets/snap/amazon-fine-food-reviews
+## Setup
 
-Expected local file:
-
-- `Reviews.csv`
-
-The script loads the dataset, keeps the `Text` and `Score` columns, removes neutral reviews with score `3`, and maps the remaining labels into:
-
-- `1-2` -> `negative`
-- `4-5` -> `positive`
-
-`Reviews.csv` is intentionally not tracked in Git because it is too large for a normal GitHub repository.
-
-## Methodology
-
-The pipeline implemented in [`absa_project.py`](./absa_project.py) follows these steps:
-
-1. Load and sample the dataset for efficient experimentation.
-2. Clean review text using lowercase normalization, punctuation removal, tokenization, and stopword removal.
-3. Extract candidate aspects from each review using spaCy part-of-speech tagging.
-4. Split the cleaned text into train and test sets.
-5. Fit `CountVectorizer` and `TfidfVectorizer` only on the training split.
-6. Train three classifiers on both feature representations.
-7. Evaluate performance using accuracy, precision, recall, F1-score, and confusion matrices.
-8. Save plots for model comparison and aspect frequency analysis.
-
-## Repository Structure
-
-- [`absa_project.py`](./absa_project.py): Main training and evaluation script
-- [`ABSA_Academic_Report.md`](./ABSA_Academic_Report.md): Full written report
-- [`accuracy_comparison.png`](./accuracy_comparison.png): Accuracy comparison across models
-- [`confusion_matrix_bow.png`](./confusion_matrix_bow.png): Confusion matrices for BoW-based models
-- [`confusion_matrix_tf-idf.png`](./confusion_matrix_tf-idf.png): Confusion matrices for TF-IDF-based models
-- [`top_aspects.png`](./top_aspects.png): Most frequent extracted aspect terms
-
-## Installation
-
-Install the required Python packages:
+Python 3.11 is recommended.
 
 ```bash
-pip install pandas numpy nltk spacy matplotlib seaborn scikit-learn
+python -m venv .venv
+# macOS/Linux:
+source .venv/bin/activate
+# Windows PowerShell:
+# .venv\Scripts\Activate.ps1
+
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 python -m spacy download en_core_web_sm
 ```
 
-## Usage
+## Dataset
 
-Place `Reviews.csv` in the project root, then run:
+Download `Reviews.csv` from the [Amazon Fine Food Reviews dataset on Kaggle](https://www.kaggle.com/datasets/snap/amazon-fine-food-reviews) and place it in the repository root, or pass its location with `--data`. The dataset is intentionally not committed.
+
+## Run
+
+Run the baseline on a reproducible sample of 5,000 reviews:
 
 ```bash
 python absa_project.py
 ```
 
-The script will:
+Use all eligible rows:
 
-- sample 5,000 reviews
-- remove neutral-class samples
-- preprocess and extract aspects
-- train and evaluate six model configurations
-- save output plots in the project directory
+```bash
+python absa_project.py --sample-size 0
+```
 
-## Experimental Results
+Choose a dataset and output directory:
 
-The current leakage-free evaluation results are:
+```bash
+python absa_project.py --data /path/to/Reviews.csv --sample-size 5000 --output-dir outputs
+```
 
-| Model | Features | Accuracy | Precision | Recall | F1-Score |
-|-------|----------|----------|-----------|--------|----------|
-| Logistic Regression | BoW | 0.887 | 0.913 | 0.959 | 0.935 |
-| Naive Bayes | BoW | 0.885 | 0.912 | 0.956 | 0.934 |
-| SVM (Linear) | BoW | 0.870 | 0.922 | 0.925 | 0.924 |
-| Logistic Regression | TF-IDF | 0.864 | 0.863 | 0.999 | 0.926 |
-| Naive Bayes | TF-IDF | 0.849 | 0.849 | 1.000 | 0.918 |
-| **SVM (Linear)** | **TF-IDF** | **0.903** | **0.913** | **0.979** | **0.945** |
+Run the aspect-heuristic demo without training:
 
-Precision, recall, and F1-score are reported for the positive class.
+```bash
+python absa_project.py --demo-only
+```
 
-## Visual Outputs
+Run tests:
 
-### Accuracy Comparison
+```bash
+pytest -q
+```
 
-![Accuracy Comparison](./accuracy_comparison.png)
+The first full run writes results to `outputs/`. Metrics are generated from that run; old reported numbers should not be assumed to match the current code until reproduced.
 
-### Confusion Matrices for TF-IDF Models
+## Evaluation interpretation
 
-![Confusion Matrix TF-IDF](./confusion_matrix_tf-idf.png)
+The review-level test split is stratified and uses a fixed random seed. Vectorizers are fitted only on training text via scikit-learn pipelines. Class weighting is used for Logistic Regression and Linear SVM; Naive Bayes remains a baseline without class weights. Review-level metrics do **not** measure aspect extraction or aspect-level sentiment.
 
-## Limitations
+For research-grade ABSA evaluation, use a dataset with explicit aspect spans/terms and sentiment labels (for example, a suitable SemEval ABSA dataset). Evaluate aspect extraction separately from sentiment polarity classification and report exact dataset splits, label mapping, per-class results and macro-F1. Do not use review-level star ratings as if they were aspect-level ground truth.
 
-- Aspect extraction is based on noun detection and does not perform true aspect-level sentiment labeling.
-- The project uses classical sparse features, so contextual language understanding is limited.
-- The dataset is heavily imbalanced toward positive reviews, which affects minority-class performance.
-- The dataset domain is food-product reviews, so cross-domain generalization is limited.
+## Known limitations
 
-## Future Improvements
+- Aspect extraction is based on spaCy noun chunks/fallback noun lemmas and can miss implicit or domain-specific aspects.
+- The aspect polarity demo uses a small lexicon and a local context window. It can fail on sarcasm, long-distance dependencies, contrastive clauses, domain-specific vocabulary and multiple opinions. It is intended for transparent demonstration, not production use.
+- The Amazon Fine Food Reviews labels are review-level and the dataset is imbalanced; class weighting and macro-F1 help analysis but do not remove all bias.
+- Classical BoW/TF-IDF models do not understand full context.
+- No web interface or API is included; the model artifact is a local inference artifact.
 
-- Introduce class balancing strategies such as class weighting or resampling
-- Move from document-level sentiment to true aspect-level sentiment assignment
-- Explore contextual embeddings and transformer-based models such as BERT
-- Improve aspect extraction with dependency parsing or sequence labeling approaches
+## Research/report hygiene
 
-## Git Notes
+After running the current code, copy the actual metrics from `outputs/model_results.csv` into the academic report and README if publishing numeric results. Record the dataset version, sample size, seed, dependency versions and split strategy. Never present previously committed scores as freshly reproduced unless they match the current run.
 
-The repository keeps the following files local and excludes them from Git via [`.gitignore`](./.gitignore):
+## License
 
-- `Reviews.csv`
-- `database.sqlite`
-- `hashes.txt`
-- `__pycache__/`
-
-This keeps the GitHub repository lightweight while allowing the full dataset and local scratch files to remain on your machine.
+MIT. See [LICENSE](LICENSE).
