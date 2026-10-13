@@ -1,0 +1,48 @@
+name: Integrate trained review sentiment model
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  integrate-model:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download the evaluated model artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh run download 38401654200 --repo "$GITHUB_REPOSITORY" --name reproduced-absa-experiments --dir /tmp/absa-artifact
+          mkdir -p outputs
+          cp /tmp/absa-artifact/amazon/best_review_sentiment_pipeline.joblib outputs/best_review_sentiment_pipeline.joblib
+          test -s outputs/best_review_sentiment_pipeline.joblib
+          ls -lh outputs/best_review_sentiment_pipeline.joblib
+      - name: Verify model artifact loads and predicts
+        run: |
+          python -m pip install 'scikit-learn>=1.4,<2.0' 'joblib>=1.3,<2.0' 'numpy>=1.26,<3.0'
+          python - <<'PY'
+          import joblib
+          model = joblib.load('outputs/best_review_sentiment_pipeline.joblib')
+          prediction = model.predict(['the product was excellent and worked perfectly'])
+          print('Loaded model:', type(model).__name__)
+          print('Smoke-test prediction:', prediction[0])
+          PY
+      - name: Commit model artifact to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add outputs/best_review_sentiment_pipeline.joblib
+          if git diff --cached --quiet; then
+            echo 'Model artifact already integrated; no commit needed.'
+          else
+            git commit -m "Add trained review sentiment model artifact"
+            git push origin HEAD:main
+          fi
