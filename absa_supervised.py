@@ -191,8 +191,8 @@ def evaluate(train_xml: str | Path, test_xml: str | Path,
     x_train, y_train, _ = examples_to_token_rows(train)
     vectorizer = DictVectorizer(sparse=True)
     X_train = _int32_csr(vectorizer.fit_transform(x_train))
-    extractor = LinearSVC(max_iter=5000, class_weight="balanced",
-                          random_state=42)
+    extractor = LinearSVC(max_iter=20000, tol=1e-3, dual="auto",
+                          class_weight="balanced", random_state=42)
     extractor.fit(X_train, y_train)
 
     gold_spans: set[tuple[int, int, int]] = set()
