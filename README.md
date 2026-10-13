@@ -97,6 +97,24 @@ For research-grade ABSA evaluation, use a dataset with explicit aspect spans/ter
 
 After running the current code, copy the actual metrics from `outputs/model_results.csv` into the academic report and README if publishing numeric results. Record the dataset version, sample size, seed, dependency versions and split strategy. Never present previously committed scores as freshly reproduced unless they match the current run.
 
+
+## Supervised ABSA evaluation (SemEval-2014 Restaurants)
+
+The repository now includes `absa_supervised.py`, a separate two-stage supervised experiment. It trains a token-level BIO aspect-term extractor and a polarity classifier that receives the sentence with the target aspect marked. It reports:
+- exact-span aspect extraction precision, recall and F1;
+- aspect polarity accuracy and macro-F1 when supplied gold aspect spans (conditional polarity evaluation);
+- end-to-end joint precision, recall and F1 requiring both exact span and correct polarity.
+
+Obtain the corrected SemEval-2014 Task 4 Restaurants training XML and gold test XML from the official task distribution and follow its access/usage terms. Keep the XML files local; they are not committed here. Save them, for example, as `data/Restaurants_Train_v2.xml` and `data/Restaurants_Test_Gold.xml`, then run:
+
+```bash
+python absa_supervised.py --train data/Restaurants_Train_v2.xml --test data/Restaurants_Test_Gold.xml --output-dir outputs/semeval14
+```
+
+The metrics are saved to `outputs/semeval14/semeval_absa_metrics.json`, polarity predictions to JSONL, and the fitted models to a local joblib artifact. Do not compare results across different SemEval releases/splits without documenting the difference. The polarity task uses gold aspects for its conditional score; the end-to-end score includes extraction errors.
+
+The SemEval run is independent of Amazon review-level sentiment. Amazon results cannot validate aspect-term extraction or aspect polarity because Amazon's `Score` labels are for whole reviews only.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
