@@ -121,6 +121,14 @@ def token_features(tokens: list[tuple[str, int, int]], i: int,
     return features
 
 
+def _int32_csr(matrix):
+    """Normalize sparse indices for scikit-learn estimators that require int32."""
+    matrix = matrix.tocsr()
+    matrix.indices = matrix.indices.astype(np.int32, copy=False)
+    matrix.indptr = matrix.indptr.astype(np.int32, copy=False)
+    return matrix
+
+
 def examples_to_token_rows(examples: list[dict[str, Any]]):
     feature_rows, labels, metadata = [], [], []
     for sentence_idx, example in enumerate(examples):
@@ -183,7 +191,7 @@ def evaluate(train_xml: str | Path, test_xml: str | Path,
     # Stage A: supervised token classification followed by exact-span decoding.
     x_train, y_train, _ = examples_to_token_rows(train)
     vectorizer = DictVectorizer(sparse=True)
-    X_train = vectorizer.fit_transform(x_train)
+    X_train = _int32_csr(vectorizer.fit_transform(x_train))
     extractor = LogisticRegression(max_iter=1500, class_weight="balanced",
                                    random_state=42, solver="liblinear")
     extractor.fit(X_train, y_train)
@@ -196,7 +204,7 @@ def evaluate(train_xml: str | Path, test_xml: str | Path,
                     for i in range(len(tokens))]
         if not features:
             continue
-        predicted_tags = extractor.predict(vectorizer.transform(features)).tolist()
+        predicted_tags = extractor.predict(_int32_csr(vectorizer.transform(features))).tolist()
         for aspect in example["aspects"]:
             gold_spans.add((sentence_idx, aspect["start"], aspect["end"]))
         for start, end in bio_to_spans(predicted_tags, tokens):
