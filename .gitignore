@@ -8,3 +8,9 @@ hashes.txt
 # Python cache files
 __pycache__/
 *.py[cod]
+
+# Generated model artifacts and evaluation outputs
+outputs/
+*.joblib
+.pytest_cache/
+.coverage
