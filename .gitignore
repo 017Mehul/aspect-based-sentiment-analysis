@@ -8,3 +8,21 @@ hashes.txt
 # Python cache files
 __pycache__/
 *.py[cod]
+
+# Generated model artifacts and evaluation outputs
+outputs/
+*.joblib
+.pytest_cache/
+.coverage
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# Local environment files
+.env
+.env.local
+.env.*.local
+!.env.example

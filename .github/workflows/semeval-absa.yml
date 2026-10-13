@@ -1,0 +1,60 @@
+name: Supervised SemEval ABSA
+
+on:
+  push:
+    branches:
+      - audit/fix-absa-pipeline
+    paths:
+      - "absa_supervised.py"
+      - "tests/test_supervised_absa.py"
+      - ".github/workflows/semeval-absa.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download SemEval-2014 Restaurants annotated XML
+        run: |
+          mkdir -p data outputs/semeval14
+          curl --fail --location --retry 3 --retry-delay 2 \
+            "https://raw.githubusercontent.com/davidsbatista/Aspect-Based-Sentiment-Analysis/master/datasets/ABSA-SemEval2014/Restaurants_Train_v2.xml" \
+            --output data/Restaurants_Train_v2.xml
+          curl --fail --location --retry 3 --retry-delay 2 \
+            "https://raw.githubusercontent.com/HSLCY/ABSA-BERT-pair/master/data/semeval2014/Restaurants_Test_Gold.xml" \
+            --output data/Restaurants_Test_Gold.xml
+          test "$(wc -c < data/Restaurants_Train_v2.xml)" -gt 100000
+          test "$(wc -c < data/Restaurants_Test_Gold.xml)" -gt 100000
+
+      - name: Train and evaluate supervised ABSA
+        run: |
+          python absa_supervised.py \
+            --train data/Restaurants_Train_v2.xml \
+            --test data/Restaurants_Test_Gold.xml \
+            --output-dir outputs/semeval14
+
+      - name: Upload ABSA metrics and models (not raw dataset)
+        uses: actions/upload-artifact@v4
+        with:
+          name: semeval14-absa-results
+          path: outputs/semeval14/
+          if-no-files-found: error
+          retention-days: 30
