@@ -122,3 +122,15 @@ Fresh metrics from the actual Amazon CSV and the supervised SemEval-2014 ABSA ex
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+## Web UI (Next.js + 3D)
+
+The repository also includes a white and yellow-green Next.js interface with an interactive Three.js hero, an analysis workspace, and a Node.js API route that proxies to the Python inference service.
+
+- Web setup and deployment: [README_UI.md](README_UI.md)
+- Python inference adapter: `api.py`
+- Local environment template: `.env.example`
+- Start the web app with `npm install` and `npm run dev`; run the Python API separately with `uvicorn api:app --host 0.0.0.0 --port 8000`.
+- Set `ABSA_API_URL` in the Next.js server environment to the Python API base URL.
+
+**Inference honesty:** aspect polarity currently uses the repository's lexicon/proximity heuristic and is labeled as such. Review-level prediction is shown only if the trained scikit-learn artifact exists. Benchmark metrics are not shown as live predictions.
