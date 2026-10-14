@@ -2,6 +2,11 @@ name: Integrate trained review sentiment model
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/integrate-trained-model.yml'
 
 permissions:
   contents: write
@@ -39,7 +44,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add outputs/best_review_sentiment_pipeline.joblib
+          git add -f outputs/best_review_sentiment_pipeline.joblib
           if git diff --cached --quiet; then
             echo 'Model artifact already integrated; no commit needed.'
           else
