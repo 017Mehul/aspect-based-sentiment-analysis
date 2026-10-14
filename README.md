@@ -60,6 +60,17 @@ FastAPI inference service on Render
 
 For the detailed local setup and environment variables, see **[README_UI.md](README_UI.md)**.
 
+
+## Application Screenshots
+
+### Homepage
+
+![Aspectly homepage](docs/images/aspectly-homepage-repo.webp)
+
+### Review Analysis
+
+![Aspectly prediction results](docs/images/aspectly-prediction-repo.webp)
+
 ## Features
 
 - Dataset loading and reproducible sampling for Amazon Fine Food Reviews.
